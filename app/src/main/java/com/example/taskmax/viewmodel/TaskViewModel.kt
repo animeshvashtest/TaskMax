@@ -35,22 +35,14 @@ open class TaskViewModel : ViewModel(application: Application) : AndroidViewMode
 
     fun editTask(task:Task, newTitle: String){
         viewModelScope.launch {
-            if (newTitle.isNotBlank()){
+            if (newTitle.isNotBlank()) {
                 taskRepository.updateTask(task.copy())
             }
 
-            fun deleteTask(task: Task){
-                viewModelScope.launch{
+            fun deleteTask(task: Task) {
+                viewModelScope.launch {
                     taskRepository.deleteTask(task)
                 }
             }
 
-
-
-
-
         }
-    }
-
-
-}

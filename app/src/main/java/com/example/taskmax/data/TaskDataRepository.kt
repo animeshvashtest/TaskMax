@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 class TaskDataRepository {private val dao: TaskMaxDao): TaskRepository
 
+    }
+
     override fun getTask() : Flow<List<Task>> {
         return dao.getAllTask().map {
             list ->
