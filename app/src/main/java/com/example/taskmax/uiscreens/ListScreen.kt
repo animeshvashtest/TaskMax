@@ -39,10 +39,10 @@ fun TasksList(
 
                 grouped.forEach {initial,tasks ->
                     stickyHeader {
-                        characterHeader(char = inital, Modifier.fillParentMaxWidth())
+                        characterHeader(char = initial, Modifier.fillParentMaxWidth())
                     }
 
-                    items(contacts){
+                    items(tasks){
                         contact ->
                         TaskInfo(
                             tasks = tasks,
