@@ -1,6 +1,3 @@
-import jdk.tools.jlink.internal.Platform.runtime
-import org.gradle.kotlin.dsl.invoke
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.taskmax"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.taskmax"
@@ -59,6 +54,9 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.animation.android)
+    implementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.compose.ui.desktop)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

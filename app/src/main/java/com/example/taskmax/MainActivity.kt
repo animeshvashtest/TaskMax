@@ -16,50 +16,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModelStore
 import com.example.taskmax.ui.theme.TaskMaxTheme
+import com.example.taskmax.uiscreens.HomeScreen
 import com.example.taskmax.uiscreens.Taskscreen
 import com.example.taskmax.viewmodel.TaskViewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val taskViewModel: TaskViewModel by viewModels ()
+    private val taskViewModel: TaskViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             MaterialTheme {
-                Surface {  }
-                Taskscreen(taskViewModel = taskViewModel)
+                Surface { }
+                HomeScreen(taskViewModel = taskViewModel)
             }
         }
-
-//        super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
-//        setContent {
-//            TaskMaxTheme {
-//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    Greeting(
-//                        name = "Android",
-//                        modifier = Modifier.padding(innerPadding)
-//                    )
-//                }
-//            }
-//        }
-    }
-  }
-
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TaskMaxTheme {
-        Greeting("Android")
     }
 }
+
+

@@ -6,13 +6,10 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.taskmax.data.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface Dao {
-    @Query("SELECT * FROM mytasks")
-    fun getAllTasks(): Flow<List<TaskEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: TaskEntity)
@@ -22,5 +19,8 @@ interface Dao {
 
     @Delete
     suspend fun delete(task: TaskEntity)
+
+    @Query("SELECT * FROM mytasks")
+    fun getAllTasks(): Flow<List<TaskEntity>>
     
 }

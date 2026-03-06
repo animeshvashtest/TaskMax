@@ -1,5 +1,9 @@
 package com.example.taskmax.uiscreens
 
+import android.R
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,9 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-//import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.filled.Delete
-//import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,207 +23,326 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.taskmax.domain.Task
 import com.example.taskmax.viewmodel.TaskViewModel
+import kotlinx.coroutines.launch
+import org.jetbrains.annotations.ApiStatus
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBar
+import com.example.taskmax.enums.Priority
 
+/** This is the main screen that displays all tasks **/
 
-@OptIn(ExperimentalMaterial3Api::class)
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(taskViewModel: TaskViewModel) {
-    var task by remember { mutableStateOf("") }
-    val taskList by taskViewModel.task
+@OptIn(ExperimentalMaterial3Api::class)
+fun HomeScreen(
+    onAddTask: () -> Unit,
+    onTaskClick: (String) -> Unit,
+    viewModel: TaskViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var searchActive by remember {mutableStateOf(false)}
+    var showFilterOptions by remember {mutableStableOf(false)}
+
+    // Show error message if any
+    LaunchedEffect(uiState.errorMessage)
+    {
+        uiState.errorMessage?.let {error ->
+            scope.launch {
+                snackbarHostState.showSnackbar(error)
+                viewModel.clearError()
+               }
+            }
+        }
+
+    val scrollBehaviour = TopAppBarDefaults.pinnedScrollBehaviour()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehaviour.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Task List") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Red,
-                    titleContentColor = Color.White
-                )
+                title = {Text("TaskFlow")},
+                scrollBehaviour = scrollBehaviour,
+                actions = {
+                    if (uiState.hasFilters){
+                        IconButton(onClick = {viewModel.clearFilters()}){
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear Filters"
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showFilterOptions = !showFilterOptions }) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter Tasks"
+                        )
+                    }
+                }
             )
+        },
+
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            AddTaskFab(onClick = onAddTask)
         }
-    ) { innerPadding ->
-        Column(
+    ) {
+        paddingValues ->
+        Column {
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        ) {
-            // Input row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = task,
-                    onValueChange = { task = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Enter task") },
-                    shape = RoundedCornerShape(22.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Red,
-                        unfocusedBorderColor = Color.Red,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
-                )
+                .padding(paddingValues)
+            ){
 
-                Button(
-                    onClick = {
-                        if (task.isNotBlank()) {
-                            taskViewModel.addTask(task)
-                            task = ""
+                //Search bar
+                SearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = { query ->
+                        viewModel.setSearchQuery(query)
+                        searchActive = false
+                    },
+
+                    active = searchActive,
+                    onActiveChange = {searchActive = it},
+                    placeholder = { Text("Search tasks...")},
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    },
+
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotBlank()) {
+                            IconButton(onClick = { viewModel.setSearchQuery(" ")}) {
+                                Icon(
+                                    ImageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear Search"
+                                )
+                            }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Add")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Task list
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = taskList,
-                    key = {     it.id }
-                ) { taskItem ->
-                    TaskItem(
-                        task = taskItem,
-                        onToggle = { taskViewModel.toggleTaskDone(taskItem) },
-                        onEdit = { newTitle -> taskViewModel.editTask(taskItem, newTitle) },
-                        onDelete = { taskViewModel.deleteTask(taskItem) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskItem(
-    task: Task,
-    onToggle: () -> Unit,
-    onEdit: (String) -> Unit,
-    onDelete: () -> Unit
-) {
-    var isEditing by remember { mutableStateOf(false) }
-    var newTitle by remember { mutableStateOf(task.title) }
-
-    LaunchedEffect(isEditing) {
-        if (isEditing) {
-            newTitle = task.title
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Checkbox(
-                checked = task.isDone,
-                onCheckedChange = { onToggle() },
-                colors = CheckboxDefaults.colors(checkedColor = Color.Red)
-            )
-
-            if (isEditing) {
-                OutlinedTextField(
-                    value = newTitle,
-                    onValueChange = { newTitle = it },
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Red,
-                        unfocusedBorderColor = Color.Red,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
-                    )
-                )
-            } else {
-                Text(
-                    text = task.title,
-                    modifier = Modifier.padding(start = 8.dp),
-                    style = if (task.isDone) {
-                        LocalTextStyle.current.copy(
-                            textDecoration = TextDecoration.LineThrough,
-                            color = Color.Gray
-                        )
-                    } else {
-                        LocalTextStyle.current
-                    }
-                )
-            }
-        }
-
-        // Action buttons
-        if (isEditing) {
-            IconButton(onClick = {
-                if (newTitle.isNotBlank()) {
-                    onEdit(newTitle.trim())
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ){
+                    //No suggestions needed
                 }
-                isEditing = false
-            }) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Save",
-                    tint = Color.Red
-                )
-            }
-        } else {
-            IconButton(onClick = { isEditing = true }) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit",
-                    tint = Color.Red
-                )
-            }
-        }
 
-        IconButton(onClick = { onDelete() }) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = Color.Red
-            )
-        }
-    }
-}
+                    // Filter options
+                   AnimatedVisibility(
+                       visible = showFilterOptions,
+                       enter = fadeIn() + slideInVertically(),
+                       exit = fadeOut() + slideOutVertically()
+                   ) {
+                       Column(
+                           modifier = Modifier
+                               .fillMaxWidth()
+                               .padding(16.dp)
+                       ) {
+                           Column(
+                               modifier = Modifier
+                                   .fillMaxWidth()
+                                   .padding(horizontal = 16.dp)
+                           ) {
+                               // No suggestions needed
+                           }
 
+                           //Filter options
+                           AnimatedVisibility(
+                               visible = showFilterOptions,
+                               enter = fadeIn() + slideInVertically(),
+                               exit = fadeOut() + slideOutVertically()
+                           ) {
+                               Column(
+                                   modifier = Modifier
+                                       .fillMaxWidth()
+                                       .padding(16.dp)
+                               ) {
+                                   Text(
+                                       text = "Filter Tasks",
+                                       style = MaterialTheme.typography.titleMedium
+                                   )
+
+                                   Spacer(modifier = Modifier.height(8.dp))
+
+                                   // Completion Filters
+                                   FlowRow(
+                                       modifier = Modifier.fillMaxWidth(),
+                                       horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                       verticalArrangement = Arrangement.spacedBy(8.dp)
+                                   ) {
+                                       FilterChip(
+                                           selected = uiState.filterCompleted == true,
+                                           onClick = {
+                                               viewModel.setCompletedFilter(
+                                                   if (uiState.filterCompleted == true) null else true
+                                               )
+                                           },
+                                           label = { Text("Completed") },
+                                           leadingIcon = {
+                                               if (uiState.filterCompleted == true) {
+                                                   Icon(
+                                                       imageVector = Icons.Default.TaskAlt,
+                                                       contentDescription = null,
+                                                       modifier = Modifier.padding(end = 4.dp)
+                                                   )
+                                               }
+                                           }
+                                       )
+
+                                       FilterChip(
+                                           selected = uiState.filterCompleted == false,
+                                           onClick = {
+                                               viewModel.setCompletedFilter(
+                                                   if (uiState.filterCompleted == false) null else false
+                                               )
+                                           },
+
+                                           label = { Text("Active") }
+                                       )
+                                   }
+
+                                   Spacer(modifier = Modifier.height(8.dp))
+
+                                   // Priority filters
+                                   Text(
+                                       text = "Priority",
+                                       style = MaterialTheme.typography.labelMedium,
+                                       modifier = Modifier.padding(vertical = 4.dp)
+                                   )
+                                   FlowRow(
+                                       modifier = Modifier.fillMaxWidth(),
+                                       horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                       verticalArrangement = Arrangement.spacedBy(8.dp)
+                                   ) {
+                                       Priority.entries.forEach { priority ->
+                                           FilterChip(
+                                               selected = uiState.filterPriority == priority,
+                                               onClick = {
+                                                   viewModel.setPriorityFilter(
+                                                       if (uiState.filterPriority == priority) null else priority
+                                                   )
+                                               },
+
+                                               label = { Text(priority.name) }
+                                           )
+
+                                       }
+                                   }
+
+                                   Spacer(modifier = Modifier, height(8.dp))
+
+                                   //Category filters
+
+                                   Text(
+                                       text = "Category",
+                                       style = MaterialTheme.typography.labelMedium,
+                                       modifier = Modifier.padding(vertical = 4.dp)
+                                   )
+
+                                   FlowRow(
+                                       modifier = Modifier.fillMaxWidth(),
+                                       horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                       verticalArrangement = Arrangement.spacedBy(8.dp)
+                                   ) {
+                                       TaskCategory.values().forEach { category ->
+                                           FilterChip(
+                                               selected = uiState.filterCategory == category,
+                                               onClick = {
+                                                   viewModel.setCategoryFilter(
+                                                       if (uiState.filterCategory == category) null else category
+                                                   )
+                                               },
+
+                                               label = { Text(category.name) }
+                                           )
+                                       }
+                                   }
+                               }
+                           }
+
+                           //Tasks List
+                           Box(
+                               modifier = Modifier
+                                   .fillMaxSize()
+                                   .padding(horizontal = 16.dp)
+                                   .padding(bottom = 100.dp)
+                           ) {
+                               if (uiState.isLoading) {
+                                   CircularProgressIndicator(
+                                       modifier = Modifier.align(Alignment.Center)
+                                   )
+                               } else if (uiState.isEmpty) {
+                                   EmptyState(
+                                       icon = Icons.Default.TaskAlt,
+                                       title = " No Tasks Found",
+                                       message = if (uiState.hasFilters)
+                                           "Try adjusting your filters or search query"
+                                       else
+                                           "Tap the + button to add your first task",
+                                       actionLabel = if (uiState.hasFilters) "Clear filters" else null,
+                                       onActionClick = if (uiState.hasFilters) {
+                                           { viewModel.clearFilters() }
+                                       } else null
+                                   )
+                               } else {
+                                   LazyColumn(
+                                       contentPadding = PaddingValues(vertical = 8.dp),
+                                       modifier = Modifier.fillMaxSize()
+                                   ) {
+                                       items(
+                                           items = uiState.tasks,
+                                           key = { it.id }
+                                       ) { task ->
+                                           TaskCard(
+                                               task = task,
+                                               onTaskClick = { onTaskClick(task.id) },
+                                               onTaskLongClick = { /* Show options menu */ },
+                                               onCompletionToggle = { completed ->
+                                                   viewModel.toggleTaskCompletion(
+                                                       task.id,
+                                                       completed
+                                                   )
+                                               },
+                                               modifier = Modifier.padding(vertical = 4.dp)
+                                           )
+                                       }
+
+                                       //Add bottom space for FAB
+                                       item { BottomNavSpacer() }
+                                   }
+                               }
+                           }
 

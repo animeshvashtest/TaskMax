@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,12 +21,14 @@ import kotlin.math.roundToInt
 
 class SwipeList {
 
-    @OptIn(ExperimentalMaterialApi::class, ExperimentalWearMaterialApi::class)
+    @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class),
+        ExperimentalWearMaterialApi::class
+    )
+    @OptIn(ExperimentalWearMaterialApi::class)
     @Composable
     private fun SwipeableSample() {
         val width = 96.dp
         val squareSize = 48.dp
-
         val swipeableState = rememberSwipeableState(0)
         val sizePx = with(LocalDensity.current) { squareSize.toPx() }
         val anchors = mapOf(0f to 0, sizePx to 1) // Maps anchor points (in px) to states

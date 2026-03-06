@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.example.taskmax.domain.Task
 
-private fun Modifier.fillMaxWidth(fraction: Any): Modifier {
+private fun Modifier.fillMaxWidth(fraction: Any) {
     return Task
 }
 
@@ -55,9 +55,4 @@ fun TasksList(
     }
 }
 
-AnimatedVisibility(
-    visible = showButton,
-    enter = fadeIn(),
-    exit = fadeOut(),
-    modifier = Modifier.padding(16.dp)
-)
+
